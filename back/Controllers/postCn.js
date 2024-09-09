@@ -2,13 +2,12 @@ import Post from "../Models/postModel.js";
 import ApiFeatures from "../Utils/Apifeatures.js";
 import { catchAsync } from "../Utils/catchAsync.js";
 import HandleERROR from "../Utils/HandleError.js";
-import adminCheck from "../middleware/adminCheck.js";
 
-// Add a new post with file upload handling
+// Add a new post
 export const addPost = catchAsync(async (req, res, next) => {
-    const { title, summary, content, author, userId } = req.body;
+    const { title, summary, content, author } = req.body;
 
-    // If there's an uploaded file, use the filename
+    // Handle file upload
     let image = '';
     if (req.file) {
         image = '/uploads/' + req.file.filename;
@@ -16,18 +15,15 @@ export const addPost = catchAsync(async (req, res, next) => {
         return next(new HandleERROR("No image uploaded", 400));
     }
 
-    // Check if all required fields are provided
     if (!title || !summary || !content || !author) {
         return next(new HandleERROR("Missing fields", 400));
     }
 
-    // Create a new post
     const aPost = await Post.create({
         title,
         summary,
         content,
         author,
-        userId,
         image,
     });
 
@@ -38,33 +34,80 @@ export const addPost = catchAsync(async (req, res, next) => {
     });
 });
 
-// Update an existing post
-export const updatePost = catchAsync(async (req, res, next) => {
-    const { postId } = req.params;
-
-    const postUp = await Post.findByIdAndUpdate(postId, req.body, {
-        new: true,
-    });
-
-    res.status(201).json({
-        success: true,
-        message: "Post updated",
-        data: postUp,
-    });
-});
-
-// Get all posts by admin check
+// Get all posts
 export const getAllPosta = catchAsync(async (req, res, next) => {
-    // const isAdmin = adminCheck(req.headers.authorization);
-    // if (!isAdmin) {
-    //     return next(new HandleERROR("You are not authorized to perform this", 401));
-    // }
-
-    const features = new ApiFeatures(Post, req.query)
+    const features = new ApiFeatures(Post.find(), req.query)
         .filter()
         .sort()
         .limitFields()
         .paginate();
-    const posts = await features.query;
-    res.status(200).json({ status: 200, data: posts });
+    
+        const posts = await features.query.populate('author', 'username'); // Populating author's username
+
+    res.status(200).json({
+        status: 200,
+        data: posts,
+    });
+
+});
+// Get a single post by ID
+export const getPostById = catchAsync(async (req, res, next) => {
+    const {id: postId } = req.params; // Use postId to match the router
+    // const posts = await features.query.populate('author', 'username');
+    // Find the post by its ID and populate the author field
+    const post = await Post.findById(postId)
+
+    if (!post) {
+        return next(new HandleERROR("Post not found", 404));
+    }
+
+    res.status(200).json({
+        success: true,
+        data: post,
+    });
+});
+
+
+
+// Update a post
+export const updatePost = catchAsync(async (req, res, next) => {
+    const { title, summary, content } = req.body;
+    let image = '';
+
+    // If a new image is uploaded, update the image
+    if (req.file) {
+        image = '/uploads/' + req.file.filename;
+    } else {
+        image = req.body.image; // Retain old image if no new image is provided
+    }
+
+    const post = await Post.findByIdAndUpdate(
+        req.params.id,
+        { title, summary, content, image },
+        { new: true, runValidators: true }
+    );
+
+    if (!post) {
+        return next(new HandleERROR("No post found with that ID", 404));
+    }
+
+    res.status(200).json({
+        success: true,
+        message: "POST updated successfully",
+        data: post,
+    });
+});
+// Delete a post
+export const deletePost = catchAsync(async (req, res, next) => {
+    const post = await Post.findByIdAndDelete(req.params.id);
+
+    if (!post) {
+        return next(new HandleERROR("No post found with that ID", 404));
+    }
+
+    res.status(204).json({
+        success: true,
+        message: "POST deleted successfully",
+        data: null,
+    });
 });
