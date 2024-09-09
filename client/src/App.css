@@ -1,0 +1,14 @@
+*{
+  box-sizing: border-box;
+}
+a{
+  cursor: pointer;
+  text-decoration: none;
+}
+body{
+  color: #222;
+  /* background-image:url(./assestt/desktop-wallpaper-soft-gradient-blur-soft-gradient-color-background-teahub-io-blurred-gradient.jpg) ;
+  background-repeat: no-repeat; */
+  /* background-size:cover ;
+  background-position: center center; */
+}
